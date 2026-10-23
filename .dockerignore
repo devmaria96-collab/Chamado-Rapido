@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+**/node_modules
+**/target
+**/dist
+**/.angular
+**/data
+**/*.log
+backend/src/main/resources/static
+demonstracao
+docs
+executavel
+_copia-nomes-trocados

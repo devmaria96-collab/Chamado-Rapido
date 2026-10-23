@@ -1,0 +1,104 @@
+{
+  "scope": "Offline demo with in-memory browser storage harness; not Angular/Spring integration",
+  "checks": 24,
+  "passed": 24,
+  "results": [
+    {
+      "test": "Initial dashboard and 36 sample tickets",
+      "passed": true
+    },
+    {
+      "test": "11 requested departments plus TI",
+      "passed": true
+    },
+    {
+      "test": "Collaborator scope",
+      "passed": true
+    },
+    {
+      "test": "New ticket persisted in model",
+      "passed": true
+    },
+    {
+      "test": "Attachment on new ticket",
+      "passed": true
+    },
+    {
+      "test": "Requester and department not spoofed",
+      "passed": true
+    },
+    {
+      "test": "Public conversation saved",
+      "passed": true
+    },
+    {
+      "test": "Technician takes ownership",
+      "passed": true
+    },
+    {
+      "test": "Internal note saved",
+      "passed": true
+    },
+    {
+      "test": "Internal note hidden from requester",
+      "passed": true
+    },
+    {
+      "test": "Resolution recorded",
+      "passed": true
+    },
+    {
+      "test": "Requester closes and rates ticket",
+      "passed": true
+    },
+    {
+      "test": "Other requester cannot open ticket",
+      "passed": true
+    },
+    {
+      "test": "Knowledge article CRUD",
+      "passed": true
+    },
+    {
+      "test": "User management CRUD",
+      "passed": true
+    },
+    {
+      "test": "Catalog management CRUD",
+      "passed": true
+    },
+    {
+      "test": "Triage escalation",
+      "passed": true
+    },
+    {
+      "test": "Triage resolved without ticket",
+      "passed": true
+    },
+    {
+      "test": "CSV download contains data",
+      "passed": true
+    },
+    {
+      "test": "Search filters correct ticket",
+      "passed": true
+    },
+    {
+      "test": "Dark theme",
+      "passed": true
+    },
+    {
+      "test": "No horizontal page overflow on mobile",
+      "passed": true
+    },
+    {
+      "test": "Storage serialization",
+      "passed": true
+    },
+    {
+      "test": "No browser JavaScript errors",
+      "passed": true
+    }
+  ],
+  "errors": []
+}

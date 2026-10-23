@@ -1,0 +1,5 @@
+# Exclusivo para desenvolvimento. Nunca exponha este perfil na internet.
+app:
+  demo: true
+server:
+  address: 127.0.0.1

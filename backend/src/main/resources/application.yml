@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: chamado-rapido
+  profiles:
+    default: local
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:file:./data/chamado;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
+    username: ${DATABASE_USER:sa}
+    password: ${DATABASE_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  jackson:
+    time-zone: America/Sao_Paulo
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+  servlet:
+    session:
+      timeout: 60m
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${COOKIE_SECURE:false}
+app:
+  demo: ${DEMO_ENABLED:false}
+  admin-email: ${ADMIN_EMAIL:}
+  admin-password: ${ADMIN_PASSWORD:}
+  storage: ${UPLOAD_DIR:./data/anexos}
+logging:
+  level:
+    org.springframework.security: WARN

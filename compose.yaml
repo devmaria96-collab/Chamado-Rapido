@@ -1,0 +1,41 @@
+name: chamado-rapido
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chamado_rapido
+      POSTGRES_USER: ${DB_USER:-chamado}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: container
+      DATABASE_URL: jdbc:postgresql://db:5432/chamado_rapido
+      DATABASE_USER: ${DB_USER:-chamado}
+      DATABASE_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env}
+      DEMO_ENABLED: ${DEMO_ENABLED:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      UPLOAD_DIR: /app/storage
+      TZ: America/Sao_Paulo
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/storage
+    stop_grace_period: 30s
+volumes:
+  database:
+  uploads:
