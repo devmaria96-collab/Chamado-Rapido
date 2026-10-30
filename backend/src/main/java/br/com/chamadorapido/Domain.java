@@ -9,6 +9,9 @@ public final class Domain {
   public enum Role { ADMIN, TECNICO, COLABORADOR }
   public enum Status { ABERTO, EM_ANDAMENTO, AGUARDANDO_USUARIO, AGUARDANDO_TERCEIROS, RESOLVIDO, FECHADO, CANCELADO }
   public enum Priority { BAIXA, MEDIA, ALTA, CRITICA }
+  public enum Channel { WEB, WHATSAPP }
+  public enum Direction { IN, OUT }
+  public enum Delivery { SENT, DELIVERED, READ, FAILED }
   @Entity @Table(name="departments")
   public static class Department {
     @Id @GeneratedValue(strategy=GenerationType.IDENTITY) public Long id;
@@ -42,6 +45,7 @@ public final class Domain {
     @Column(nullable=false,length=180) public String title;
     @Column(nullable=false,columnDefinition="text") public String description;
     @ManyToOne(optional=false) public User requester;
+    @Column(length=120) public String requesterName;
     @ManyToOne(optional=false) public Department department;
     @ManyToOne(optional=false) public Category category;
     @ManyToOne public User assignee;
@@ -59,6 +63,17 @@ public final class Domain {
     public Instant firstResponseAt;
     public Instant resolvedAt;
     public Instant closedAt;
+    @Enumerated(EnumType.STRING) @JdbcTypeCode(SqlTypes.VARCHAR) @Column(nullable=false,length=16) public Channel channel=Channel.WEB;
+    @Column(length=20) public String whatsappPhone;
+    public Instant whatsappWindowUntil;
+    @Column(nullable=false) public int protocolNo;
+    @Column(nullable=false) public int protocolCycle=1;
+  }
+  @Entity(name="AttendanceCycle") @Table(name="attendance_cycle")
+  public static class AttendanceCycle {
+    @Id public Short id;
+    @Column(nullable=false) public int cycleNo=1;
+    @Column(nullable=false) public int nextNo=1;
   }
   @Entity @Table(name="comments")
   public static class Comment {
@@ -68,6 +83,11 @@ public final class Domain {
     @Column(nullable=false,columnDefinition="text") public String body;
     @Column(nullable=false) public boolean internal=false;
     @Column(nullable=false) public Instant createdAt=Instant.now();
+    @Enumerated(EnumType.STRING) @JdbcTypeCode(SqlTypes.VARCHAR) @Column(nullable=false,length=16) public Channel channel=Channel.WEB;
+    @Enumerated(EnumType.STRING) @JdbcTypeCode(SqlTypes.VARCHAR) @Column(nullable=false,length=8) public Direction direction=Direction.OUT;
+    @Column(length=128) public String externalId;
+    @Enumerated(EnumType.STRING) @JdbcTypeCode(SqlTypes.VARCHAR) @Column(length=16) public Delivery deliveryStatus;
+    @Column(length=300) public String failureReason;
   }
   @Entity @Table(name="ticket_history")
   public static class History {

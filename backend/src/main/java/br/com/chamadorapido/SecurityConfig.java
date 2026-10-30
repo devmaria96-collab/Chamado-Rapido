@@ -34,12 +34,19 @@ public class SecurityConfig {
   @Bean UserDetailsService userDetailsService(UserRepository users){return email->{var u=users.findByEmailIgnoreCase(email.trim()).orElseThrow(()->new UsernameNotFoundException("Credenciais inválidas"));return new Principal(u.id,u.email,u.passwordHash,u.role.name(),u.authVersion,u.active);};}
   private final LoginThrottle throttle=new LoginThrottle();
   @Bean SecurityFilterChain security(HttpSecurity http, UserService accounts) throws Exception {
-    http.csrf(c->c.csrfTokenRepository(new HttpSessionCsrfTokenRepository()))
-      .authorizeHttpRequests(a->a.requestMatchers("/api/auth/csrf","/api/public/info","/api/public/sectors").permitAll().requestMatchers("/api/**").authenticated().anyRequest().permitAll())
-      .formLogin(f->f.loginProcessingUrl("/api/auth/login").usernameParameter("email").successHandler((req,res,auth)->{throttle.clear(req);json(res,200,"{\"ok\":true}");}).failureHandler((req,res,e)->{throttle.fail(req);json(res,401,"{\"message\":\"Setor ou senha inválidos.\"}");}).permitAll())
+    http.csrf(c->c.csrfTokenRepository(new HttpSessionCsrfTokenRepository()).ignoringRequestMatchers("/api/public/whatsapp/webhook"))
+      .authorizeHttpRequests(a->a.requestMatchers("/api/auth/csrf","/api/public/info","/api/public/sectors","/api/public/whatsapp/webhook").permitAll().requestMatchers("/ws/desk").authenticated().requestMatchers("/api/**").authenticated().anyRequest().permitAll())
+      .formLogin(f->f.loginProcessingUrl("/api/auth/login").usernameParameter("email").successHandler((req,res,auth)->{throttle.clear(req);json(res,200,"{\"ok\":true}");}).failureHandler((req,res,e)->{throttle.fail(req);json(res,401,"{\"message\":\"Nome ou senha inválidos.\"}");}).permitAll())
       .logout(l->l.logoutUrl("/api/auth/logout").invalidateHttpSession(true).deleteCookies("JSESSIONID").logoutSuccessHandler((req,res,auth)->json(res,200,"{\"ok\":true}")))
       .exceptionHandling(e->e.authenticationEntryPoint((req,res,ex)->json(res,401,"{\"message\":\"Sua sessão expirou. Entre novamente.\"}")).accessDeniedHandler((req,res,ex)->json(res,403,"{\"message\":\"Operação não autorizada ou sessão de segurança expirada. Atualize a página.\"}")))
-      .headers(h->h.contentSecurityPolicy(c->c.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'")))
+      .headers(h->h.contentSecurityPolicy(c->c.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"))
+        .addHeaderWriter((request, response) -> {
+          String uri = request.getRequestURI();
+          if (uri != null && uri.contains("/api/attachments/")) {
+            response.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'self'");
+            response.setHeader("X-Frame-Options", "SAMEORIGIN");
+          }
+        }))
       .addFilterBefore(new SectorLoginFilter(accounts),UsernamePasswordAuthenticationFilter.class)
       .addFilterBefore(throttle,UsernamePasswordAuthenticationFilter.class);
     return http.build();
@@ -49,8 +56,8 @@ public class SecurityConfig {
     private final UserService accounts;
     SectorLoginFilter(UserService accounts){this.accounts=accounts;}
     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain)throws ServletException,IOException{
-      if("POST".equals(req.getMethod())&&"/api/auth/login".equals(req.getServletPath())&&req.getParameter("sector")!=null){
-        String resolved=accounts.emailForSector(req.getParameter("sector"));
+      if(loginPost(req)&&req.getParameter("nome")!=null){
+        String resolved=accounts.emailForName(req.getParameter("nome"));
         if(resolved.isBlank())resolved="invalid@invalid.invalid";
         String email=resolved;
         chain.doFilter(new HttpServletRequestWrapper(req){
@@ -61,6 +68,13 @@ public class SecurityConfig {
         return;
       }
       chain.doFilter(req,res);
+    }
+    private static boolean loginPost(HttpServletRequest req){
+      if(!"POST".equals(req.getMethod()))return false;
+      if("/api/auth/login".equals(req.getServletPath()))return true;
+      String uri=req.getRequestURI();
+      String context=req.getContextPath()==null?"":req.getContextPath();
+      return uri!=null&&uri.equals(context+"/api/auth/login");
     }
   }
   /** Limite local por IP. Em cluster, aplicar limite compartilhado no proxy. */

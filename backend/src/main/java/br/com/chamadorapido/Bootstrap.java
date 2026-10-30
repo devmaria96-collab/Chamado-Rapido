@@ -10,19 +10,19 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 @Component
 public class Bootstrap implements ApplicationRunner {
-  private final UserRepository users; private final DepartmentRepository departments; private final CategoryRepository categories; private final TicketRepository tickets; private final ArticleRepository articles; private final HistoryRepository history; private final CommentRepository comments; private final NotificationRepository notifications; private final PasswordEncoder encoder;
+  private final UserRepository users; private final DepartmentRepository departments; private final CategoryRepository categories; private final TicketRepository tickets; private final ArticleRepository articles; private final HistoryRepository history; private final CommentRepository comments; private final NotificationRepository notifications; private final PasswordEncoder encoder; private final ProtocolService protocols;
   private final boolean demo; private final String adminEmail; private final String adminPassword;
-  public Bootstrap(UserRepository users,DepartmentRepository departments,CategoryRepository categories,TicketRepository tickets,ArticleRepository articles,HistoryRepository history,CommentRepository comments,NotificationRepository notifications,PasswordEncoder encoder,@Value("${app.demo}")boolean demo,@Value("${app.admin-email}")String adminEmail,@Value("${app.admin-password}")String adminPassword){this.users=users;this.departments=departments;this.categories=categories;this.tickets=tickets;this.articles=articles;this.history=history;this.comments=comments;this.notifications=notifications;this.encoder=encoder;this.demo=demo;this.adminEmail=adminEmail;this.adminPassword=adminPassword;}
+  public Bootstrap(UserRepository users,DepartmentRepository departments,CategoryRepository categories,TicketRepository tickets,ArticleRepository articles,HistoryRepository history,CommentRepository comments,NotificationRepository notifications,PasswordEncoder encoder,ProtocolService protocols,@Value("${app.demo}")boolean demo,@Value("${app.admin-email}")String adminEmail,@Value("${app.admin-password}")String adminPassword){this.users=users;this.departments=departments;this.categories=categories;this.tickets=tickets;this.articles=articles;this.history=history;this.comments=comments;this.notifications=notifications;this.encoder=encoder;this.protocols=protocols;this.demo=demo;this.adminEmail=adminEmail;this.adminPassword=adminPassword;}
   @Override @Transactional public void run(ApplicationArguments args){
-    if(users.count()>0)return;
+    if(users.count()>0){if(demo)upgradeStaffPassword();return;}
     List<Department> ds=new ArrayList<>();for(String name:List.of("Recepção","Diretoria","Cobrança","Assistentes","RH","Telefonista","Jurídico","Financeiro","Compras","Contabilidade","Conferência","Tecnologia da Informação")){Department d=new Department();d.name=name;ds.add(departments.save(d));}
     List<Category> cs=new ArrayList<>();for(String name:List.of("Computadores","Rede e internet","Impressoras","Sistemas e acessos","E-mail e comunicação","Instalação de software","Telefonia","Outros")){Category c=new Category();c.name=name;c.description="Suporte para "+name.toLowerCase(Locale.ROOT);cs.add(categories.save(c));}
     String password=demo?"Demo@Rapido2026!":adminPassword;
     String email=demo?"admin@chamadorapido.local":adminEmail;
     if(email.isBlank()||!email.contains("@"))throw new IllegalStateException("Defina ADMIN_EMAIL para o primeiro acesso.");UserService.checkPassword(password);
-    String hash=encoder.encode(password);User admin=user("Administrador",email,Role.ADMIN,ds.get(11),hash);admin.mustChangePassword=!demo;users.save(admin);
+    String hash=encoder.encode(password);String staffHash=demo?encoder.encode("coop2026"):hash;User admin=user("Administrador",email,Role.ADMIN,ds.get(11),staffHash);admin.mustChangePassword=!demo;users.save(admin);
     addArticles();if(!demo)return;
-    User tech=user("Equipe de TI","ti@chamadorapido.local",Role.TECNICO,ds.get(11),hash);
+    User tech=user("Equipe de TI","ti@chamadorapido.local",Role.TECNICO,ds.get(11),staffHash);
     String[] names={"Ana Martins","Daniel Costa","Juliana Santos","Rafael Lima","Camila Ferreira","Beatriz Oliveira","Marcos Ribeiro","Luiza Almeida","Bruno Souza","Patrícia Mendes","Felipe Rocha"};
     String[] emails={"recepcao","diretoria","cobranca","assistentes","rh","telefonista","juridico","financeiro","compras","contabilidade","conferencia"};
     List<User> people=new ArrayList<>();for(int i=0;i<11;i++)people.add(user(names[i],emails[i]+"@chamadorapido.local",Role.COLABORADOR,ds.get(i),hash));
@@ -34,11 +34,12 @@ public class Bootstrap implements ApplicationRunner {
       int state=i%9;t.status=state<2?Status.ABERTO:state<5?Status.EM_ANDAMENTO:state==5?Status.AGUARDANDO_USUARIO:state==6?Status.AGUARDANDO_TERCEIROS:state==7?Status.RESOLVIDO:Status.FECHADO;
       if(t.status!=Status.ABERTO){t.assignee=i%2==0?admin:tech;t.firstResponseAt=t.createdAt.plusSeconds(1800);}
       if(t.status==Status.RESOLVIDO||t.status==Status.FECHADO){t.solution="Configuração revisada e testes realizados com o solicitante. Funcionamento normalizado.";t.resolvedAt=t.createdAt.plus(Duration.ofHours(3));t.updatedAt=t.resolvedAt;t.rating=i%2==0?5:4;if(t.status==Status.FECHADO)t.closedAt=t.resolvedAt.plusSeconds(600);}
-      tickets.save(t);History h=new History();h.ticket=t;h.actor=requester;h.action="Chamado aberto";h.details="Dados demonstrativos.";h.createdAt=t.createdAt;history.save(h);
+      protocols.assign(t);tickets.save(t);History h=new History();h.ticket=t;h.actor=requester;h.action="Chamado aberto";h.details="Dados demonstrativos.";h.createdAt=t.createdAt;history.save(h);
       if(t.assignee!=null){Comment c=new Comment();c.ticket=t;c.author=t.assignee;c.body="Recebemos sua solicitação. Estamos verificando o equipamento e acompanharemos o caso por aqui.";c.createdAt=t.firstResponseAt;comments.save(c);}
       if(i<5){Notification n=new Notification();n.recipient=admin;n.ticket=t;n.title="Novo chamado: "+t.title;n.createdAt=t.createdAt;notifications.save(n);}
     }
   }
+  private void upgradeStaffPassword(){for(User u:users.findByActiveTrue()){if(!UserService.staff(u)||!encoder.matches("Demo@Rapido2026!",u.passwordHash))continue;u.passwordHash=encoder.encode("coop2026");users.save(u);}}
   private User user(String name,String email,Role role,Department dep,String hash){User u=new User();u.name=name;u.email=email;u.role=role;u.department=dep;u.passwordHash=hash;return users.save(u);}
   private void addArticles(){
     String[][] data={

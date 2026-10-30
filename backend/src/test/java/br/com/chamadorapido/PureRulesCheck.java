@@ -13,9 +13,9 @@ public class PureRulesCheck {
     check(TicketRules.canTransition("ABERTO","EM_ANDAMENTO",true),"Tecnico pode iniciar");
     check(!TicketRules.canTransition("ABERTO","RESOLVIDO",true),"Nao pular atendimento");
     check(!TicketRules.canTransition("ABERTO","EM_ANDAMENTO",false),"Usuario nao atende");
-    check(TicketRules.canTransition("ABERTO","CANCELADO",false),"Usuario cancela aberto");
-    check(TicketRules.canTransition("RESOLVIDO","FECHADO",false),"Usuario confirma solucao");
-    check(TicketRules.canTransition("RESOLVIDO","EM_ANDAMENTO",false),"Usuario reabre resolvido");
+    check(!TicketRules.canTransition("ABERTO","CANCELADO",false),"Usuario nao altera status");
+    check(!TicketRules.canTransition("RESOLVIDO","FECHADO",false),"Usuario nao encerra");
+    check(!TicketRules.canTransition("RESOLVIDO","EM_ANDAMENTO",false),"Usuario nao reabre");
     check(!TicketRules.canTransition("FECHADO","EM_ANDAMENTO",false),"Usuario nao reabre encerrado");
     check(TicketRules.canTransition("FECHADO","EM_ANDAMENTO",true),"TI reabre encerrado");
     check(!TicketRules.canTransition("CANCELADO","EM_ANDAMENTO",true),"Cancelado imutavel");

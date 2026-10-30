@@ -16,7 +16,7 @@ export class ApiService {
     return content as T;
   }
   async login(email:string,password:string):Promise<void>{await this.csrf();await this.request('/auth/login','POST',new URLSearchParams({email,password}));await this.csrf();}
-  async loginSector(sector:string,password:string):Promise<void>{await this.csrf();await this.request('/auth/login','POST',new URLSearchParams({sector,password}));await this.csrf();}
+  async loginByName(nome:string,senha:string):Promise<void>{await this.csrf();await this.request('/auth/login','POST',new URLSearchParams({nome,password:senha}));await this.csrf();}
   async logout():Promise<void>{await this.request('/auth/logout','POST');this.csrfToken='';}
   async download(path:string,filename:string):Promise<void>{const r=await fetch('/api'+path,{credentials:'same-origin'});if(!r.ok)throw new ApiError('Não foi possível baixar o arquivo.',r.status);const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 }

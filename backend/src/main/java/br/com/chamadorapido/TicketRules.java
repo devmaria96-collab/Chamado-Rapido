@@ -12,9 +12,8 @@ public final class TicketRules {
     "RESOLVIDO",Set.of("FECHADO","EM_ANDAMENTO"),
     "FECHADO",Set.of("EM_ANDAMENTO"),"CANCELADO",Set.of());
   public static boolean canTransition(String from,String to,boolean staff) {
-    if (!TRANSITIONS.getOrDefault(from,Set.of()).contains(to)) return false;
-    return staff || (from.equals("ABERTO")&&to.equals("CANCELADO")) ||
-      (from.equals("RESOLVIDO")&&(to.equals("FECHADO")||to.equals("EM_ANDAMENTO")));
+    if (!staff) return false;
+    return TRANSITIONS.getOrDefault(from,Set.of()).contains(to);
   }
   public static boolean terminal(String status) {return Set.of("RESOLVIDO","FECHADO","CANCELADO").contains(status);}
   public static Instant deadline(Instant start,String priority) {

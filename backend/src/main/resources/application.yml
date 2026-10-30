@@ -38,6 +38,13 @@ app:
   admin-email: ${ADMIN_EMAIL:}
   admin-password: ${ADMIN_PASSWORD:}
   storage: ${UPLOAD_DIR:./data/anexos}
+  websocket-origins: ${WEBSOCKET_ORIGINS:http://127.0.0.1:*,http://localhost:*}
+  whatsapp:
+    token: ${WHATSAPP_TOKEN:}
+    phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+    verify-token: ${WHATSAPP_VERIFY_TOKEN:}
+    app-secret: ${WHATSAPP_APP_SECRET:}
+    graph-version: ${WHATSAPP_GRAPH_VERSION:v21.0}
 logging:
   level:
     org.springframework.security: WARN

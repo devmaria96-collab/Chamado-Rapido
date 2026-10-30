@@ -1,0 +1,346 @@
+<div class="desk" [class.theme-light]="theme==='light'" [class.is-narrow]="collapsed" [class.nav-open]="navOpen">
+  <aside class="desk-side">
+    <div class="side-brand">
+      <img src="assets/logo-original.png" alt="Chamado Rápido">
+      <button type="button" class="side-fold" (click)="toggleNav()" [attr.aria-label]="collapsed ? 'Expandir menu' : 'Recolher menu'"><ui-icon name="menu"/></button>
+    </div>
+    <nav aria-label="Central da TI">
+      <button type="button" [class.active]="page==='painel'" (click)="show('painel')"><ui-icon name="board"/><span>Painel</span></button>
+      <button type="button" [class.active]="page==='conversas'" (click)="show('conversas')"><ui-icon name="chat"/><span>Conversas</span></button>
+      <button type="button" [class.active]="page==='historico'" (click)="show('historico')"><ui-icon name="clock"/><span>Histórico</span></button>
+      <button type="button" [class.active]="page==='equipe'" (click)="show('equipe')"><ui-icon name="users"/><span>Equipe</span></button>
+      <button type="button" [class.active]="page==='configuracoes'" (click)="show('configuracoes')"><ui-icon name="settings"/><span>Configurações</span></button>
+    </nav>
+    <div class="desk-profile" (click)="$event.stopPropagation()">
+      <button type="button" class="profile-button" (click)="profileOpen=!profileOpen" aria-haspopup="menu" [attr.aria-expanded]="profileOpen">
+        <span class="avatar">{{initials}}</span>
+        <span class="who"><strong>{{user.name}}</strong><small>{{roleLabel}}</small></span>
+      </button>
+      @if (profileOpen) {
+        <div class="profile-menu" role="menu">
+          <button type="button" role="menuitem" (click)="leave.emit()"><ui-icon name="logout"/>Sair</button>
+        </div>
+      }
+    </div>
+  </aside>
+  @if (navOpen) { <button type="button" class="nav-shade" aria-label="Fechar menu" (click)="navOpen=false"></button> }
+
+  <section class="desk-main">
+    <header class="desk-top">
+      <button type="button" class="menu-button" (click)="toggleNav()" aria-label="Abrir menu"><ui-icon name="menu"/></button>
+      <div class="desk-heading">
+        @if (page==='painel') { <h1>Painel de atendimentos</h1> }
+        @if (page==='conversas') { <h1>Conversas</h1> }
+        @if (page==='historico') { <h1>Histórico</h1> }
+        @if (page==='equipe') { <h1>Equipe</h1> }
+        @if (page==='configuracoes') { <h1>Configurações</h1> }
+        @if (page==='perfil') { <h1>Perfil</h1> }
+        <p>{{headingHint}}</p>
+      </div>
+      <div class="desk-tools">
+        @if (page==='painel') {
+          <label class="desk-search"><ui-icon name="search"/><input [(ngModel)]="boardQuery" name="boardq" placeholder="Buscar chamados..." aria-label="Buscar chamados"></label>
+        }
+        <button type="button" class="icon-round" (click)="toggleTheme()" [attr.aria-label]="theme==='dark' ? 'Ativar tema claro' : 'Ativar tema escuro'"><ui-icon [name]="theme==='dark' ? 'sun' : 'moon'"/></button>
+        <div class="head-user" (click)="$event.stopPropagation()">
+          <button type="button" class="ti-chip" (click)="headerMenu=!headerMenu" aria-haspopup="menu" [attr.aria-expanded]="headerMenu" [attr.aria-label]="'Menu de ' + user.name"><span class="avatar">{{initials}}</span><ui-icon name="chevronDown"/></button>
+          @if (headerMenu) {
+            <div class="profile-menu head-menu" role="menu">
+              <button type="button" role="menuitem" (click)="openProfile()"><ui-icon name="user"/>Perfil</button>
+              <button type="button" role="menuitem" (click)="leave.emit()"><ui-icon name="logout"/>Sair</button>
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+    @if (error) { <p class="desk-alert" role="alert">{{error}}</p> }
+    @if (notice) { <p class="desk-note">{{notice}}</p> }
+
+    @if (page==='painel') {
+      @if (loading) { <p class="desk-wait">Carregando chamados...</p> }
+      @else {
+        <section class="dashboard-summary" aria-label="Resumo dos atendimentos">
+          @for (card of indicators; track card.id) {
+            <article class="summary-card" [attr.data-tone]="card.tone">
+              <ui-icon [name]="card.icon"/>
+              <div><strong>{{indicator(card.id)}}</strong><span>{{card.label}}</span></div>
+            </article>
+          }
+        </section>
+        <section class="dashboard-kanban">
+        <div class="kanban">
+          @for (column of columns; track column.id) {
+            <section class="kanban-col" [attr.data-column]="column.id">
+              <header>
+                <div class="col-title"><ui-icon [name]="column.icon"/><div><strong>{{column.title}}</strong><small>{{column.hint}}</small></div></div>
+                <span class="col-count">{{countOf(column.id)}}</span>
+              </header>
+              <div class="kanban-list" cdkDropList [id]="column.id" [cdkDropListData]="shown(column)" [cdkDropListConnectedTo]="dropIds" (cdkDropListDropped)="drop($event)">
+                @for (ticket of shown(column); track ticket.id) {
+                  <article class="kanban-card" cdkDrag [cdkDragData]="ticket" (click)="open(ticket)" [class.selected]="detail?.ticket?.id===ticket.id" [class.fresh]="unread(ticket)">
+                    <div class="sheet-top">
+                      <h2>{{ticket.requester}}</h2>
+                      <em [attr.data-tone]="column.id==='resolvidos' ? 'resolvido' : ticket.priority">{{column.id==='resolvidos' ? 'Resolvido' : priorityLabels[ticket.priority]}}</em>
+                    </div>
+                    <p class="sheet-subject">{{ticket.title}}</p>
+                    <footer><ui-icon [name]="ticket.channel==='WHATSAPP' ? 'chat' : 'file'"/><span>Protocolo {{ticket.protocol}}</span></footer>
+                  </article>
+                }
+                @if (!shown(column).length) { <p class="kanban-empty">Nenhum chamado</p> }
+              </div>
+            </section>
+          }
+        </div>
+        </section>
+      }
+    }
+
+    @if (page==='conversas') {
+      <div class="inbox">
+        <div class="inbox-list">
+          <input [(ngModel)]="conversationQuery" name="cq" placeholder="Buscar nome, assunto ou protocolo" aria-label="Buscar solicitação">
+          <div class="inbox-switch">
+            <button type="button" [class.active]="activeThreads" (click)="activeThreads=true">Em andamento</button>
+            <button type="button" [class.active]="!activeThreads" (click)="activeThreads=false">Todas</button>
+          </div>
+          @for (ticket of threads; track ticket.id) {
+            <button type="button" class="thread" [class.selected]="detail?.ticket?.id===ticket.id" (click)="open(ticket)">
+              <span class="sheet-top"><strong>{{ticket.requester}}</strong><em [attr.data-tone]="priorityTone(ticket)">{{priorityText(ticket)}}</em></span>
+              <small>{{ticket.department}}</small>
+              <span class="thread-title">{{ticket.title}}</span>
+              <span>Protocolo {{ticket.protocol}}</span>
+            </button>
+          }
+          @if (!threads.length) { <p class="desk-wait">Nenhuma solicitação nesta lista.</p> }
+        </div>
+        @if (detail) {
+          <section class="request-view" aria-label="Detalhes da solicitação">
+            <article class="paper-card paper-id">
+              <div>
+                <h2>{{detail.ticket.requester}}</h2>
+                <p class="paper-meta"><span>{{detail.ticket.department}}</span><span>Protocolo {{detail.ticket.protocol}}</span><span>{{stageLabel(detail.ticket)}}</span><time>{{detail.ticket.createdAt | date:'dd/MM/yyyy HH:mm'}}</time></p>
+              </div>
+              <em [attr.data-tone]="priorityTone(detail.ticket)">{{priorityText(detail.ticket)}}</em>
+            </article>
+            <article class="paper-card paper-request">
+              <h2>Solicitação</h2>
+              <h3>{{detail.ticket.title}}</h3>
+              <p class="request-body">{{detail.ticket.description}}</p>
+              @if (detail.attachments.length) {
+                <div class="request-files">
+                  @for (file of detail.attachments; track file.id) {
+                    <figure>
+                      @if (isImage(file.mime) && !brokenFiles[file.id]) {
+                        <button type="button" (click)="enlarged=file" [attr.aria-label]="'Ampliar ' + file.name"><img [src]="fileUrl(file.id)" [alt]="file.name" (error)="markBroken(file.id)"></button>
+                      } @else if (isPdf(file.mime) && !brokenFiles[file.id]) {
+                        <iframe [src]="safeFile(file.id)" [title]="file.name"></iframe>
+                      } @else {
+                        <p class="file-missing">{{brokenFiles[file.id] ? 'Não foi possível carregar este arquivo.' : 'Pré-visualização indisponível para este tipo de arquivo.'}}</p>
+                      }
+                      <figcaption><span>{{file.name}} · {{fileSize(file.size)}}</span><button type="button" (click)="download(file.id, file.name)">Baixar</button></figcaption>
+                    </figure>
+                  }
+                </div>
+              }
+            </article>
+            <article class="paper-card">
+              <h2>Informações do atendimento</h2>
+              <dl class="paper-facts">
+                <div><dt>Responsável</dt><dd>{{detail.ticket.assignee || 'Sem atendente'}}</dd></div>
+                <div><dt>Categoria</dt><dd>{{detail.ticket.category}}</dd></div>
+                @if (detail.ticket.resolvedAt) { <div><dt>Resolvido em</dt><dd>{{detail.ticket.resolvedAt | date:'dd/MM/yyyy HH:mm'}}</dd></div> }
+                @if (detail.ticket.solution) { <div><dt>Solução registrada</dt><dd>{{detail.ticket.solution}}</dd></div> }
+              </dl>
+            </article>
+            <div class="request-actions">
+              <button type="button" class="assume-btn" (click)="assume()" [disabled]="busy || !canAssume(detail.ticket)">{{assumeLabel(detail.ticket)}}</button>
+              <button type="button" class="resolve-btn" (click)="askFinish()" [disabled]="busy || !canResolve(detail.ticket)">Chamado resolvido</button>
+            </div>
+            @if (detail.ticket.assigneeId && detail.ticket.assigneeId !== user.id && !locked(detail.ticket)) {
+              <div class="request-transfer">
+                <select [(ngModel)]="transferTo" name="transfer" aria-label="Transferir para">
+                  <option value="">Transferir para</option>
+                  @for (tech of meta.technicians; track tech.id) { <option [value]="tech.id">{{tech.name}}</option> }
+                </select>
+                <button type="button" (click)="transfer()" [disabled]="busy || !transferTo">Transferir</button>
+              </div>
+            }
+            @if (finishAsk) {
+              <form class="paper-card solution-card" (ngSubmit)="finish()">
+                <label>Solução<textarea [(ngModel)]="solution" name="solution" rows="3" placeholder="Descreva o que foi feito, com pelo menos 10 caracteres"></textarea></label>
+                <button type="submit" class="resolve-btn" [disabled]="busy">Confirmar resolução</button>
+              </form>
+            }
+            @if (reopenAsk) {
+              <form class="paper-card solution-card" (ngSubmit)="reopen()">
+                <label>Justificativa<textarea [(ngModel)]="reason" name="reason" rows="3" placeholder="Por que o atendimento volta, com pelo menos 10 caracteres"></textarea></label>
+                <button type="submit" class="assume-btn" [disabled]="busy">Reabrir atendimento</button>
+              </form>
+            }
+          </section>
+        } @else {
+          <p class="inbox-empty">Selecione uma solicitação para visualizar.</p>
+        }
+      </div>
+      @if (enlarged) {
+        <div class="preview-back" (click)="enlarged=null">
+          <figure (click)="$event.stopPropagation()">
+            <img [src]="fileUrl(enlarged.id)" [alt]="enlarged.name" (error)="markBroken(enlarged.id)">
+            <div>
+              <span>{{enlarged.name}} · {{fileSize(enlarged.size)}}</span>
+              <button type="button" (click)="download(enlarged.id, enlarged.name)">Baixar</button>
+              <button type="button" (click)="enlarged=null">Fechar</button>
+            </div>
+          </figure>
+        </div>
+      }
+    }
+
+    @if (page==='historico') {
+      <form class="desk-filters" (ngSubmit)="loadHistory(0)">
+        <input [(ngModel)]="historyQuery" name="q" placeholder="Solicitante, protocolo ou telefone" aria-label="Buscar no histórico">
+        <select [(ngModel)]="historyStatus" name="status" aria-label="Status">
+          <option value="">Todos os status</option>
+          @for (status of statusKeys; track status) { <option [value]="status">{{statusLabels[status]}}</option> }
+        </select>
+        <select [(ngModel)]="historyPriority" name="priority" aria-label="Prioridade">
+          <option value="">Todas as prioridades</option>
+          @for (priority of priorityKeys; track priority) { <option [value]="priority">{{priorityLabels[priority]}}</option> }
+        </select>
+        <select [(ngModel)]="historyDepartment" name="department" aria-label="Departamento">
+          <option value="">Todos os departamentos</option>
+          @for (item of meta.departments; track item.id) { <option [value]="item.id">{{item.name}}</option> }
+        </select>
+        <select [(ngModel)]="historyAssignee" name="assignee" aria-label="Atendente">
+          <option value="">Todos os atendentes</option>
+          @for (tech of meta.technicians; track tech.id) { <option [value]="tech.id">{{tech.name}}</option> }
+        </select>
+        <button type="submit">Buscar</button>
+      </form>
+      <div class="history-list">
+        @for (ticket of history; track ticket.id) {
+          <button type="button" class="history-row" (click)="open(ticket)">
+            <b>{{ticket.protocol}}</b>
+            <strong>{{ticket.requester}}</strong>
+            <span>{{ticket.department}}</span>
+            <span>{{priorityLabels[ticket.priority]}}</span>
+            <span>{{statusLabels[ticket.status]}}</span>
+            <span>{{ticket.assignee || 'Sem atendente'}}</span>
+            <time>{{ticket.createdAt | date:'dd/MM/yyyy HH:mm'}}</time>
+          </button>
+        }
+        @if (!history.length) { <p class="desk-wait">Nenhum chamado encontrado.</p> }
+        @if (historyPages > 1) {
+          <div class="history-pages">
+            <button type="button" (click)="loadHistory(historyPage-1)" [disabled]="historyPage===0">Anterior</button>
+            <span>{{historyPage + 1}} de {{historyPages}} · {{historyTotal}} chamados</span>
+            <button type="button" (click)="loadHistory(historyPage+1)" [disabled]="historyPage+1>=historyPages">Próxima</button>
+          </div>
+        }
+      </div>
+    }
+
+    @if (page==='equipe') {
+      <div class="team-grid">
+        <section>
+          <h2>Responsabilidades</h2>
+          <ul class="admin-list">
+            @for (tech of meta.technicians; track tech.id) {
+              <li>
+                <div><strong>{{tech.name}}</strong><small>{{assignedCount(tech.id)}} atendimentos em aberto</small></div>
+              </li>
+            }
+          </ul>
+        </section>
+        @if (admin) {
+          <section>
+            <h2>Atendentes</h2>
+            <form class="admin-form" (ngSubmit)="createUser()">
+              <input [(ngModel)]="newUser.name" name="uname" placeholder="Nome" aria-label="Nome do atendente">
+              <input [(ngModel)]="newUser.email" name="uemail" type="email" placeholder="E-mail" aria-label="E-mail do atendente">
+              <select [(ngModel)]="newUser.role" name="urole" aria-label="Papel">
+                <option value="TECNICO">Atendente de TI</option>
+                <option value="ADMIN">Administrador de TI</option>
+              </select>
+              <select [(ngModel)]="newUser.departmentId" name="udept" aria-label="Departamento do atendente">
+                <option value="">Departamento</option>
+                @for (item of departments; track item.id) { <option [value]="item.id">{{item.name}}</option> }
+              </select>
+              <input [(ngModel)]="newUser.password" name="upass" type="password" placeholder="Senha temporária" aria-label="Senha temporária">
+              <button type="submit" [disabled]="busy">Cadastrar</button>
+            </form>
+            <ul class="admin-list">
+              @for (person of users; track person.id) {
+                <li>
+                  <div><strong>{{person.name}}</strong><small>{{person.email}} · {{person.role==='ADMIN' ? 'Administrador de TI' : person.role==='TECNICO' ? 'Atendente de TI' : roles[person.role]}} · {{person.department}}</small></div>
+                  <button type="button" (click)="toggleUser(person)" [disabled]="busy || person.role==='COLABORADOR'">{{person.active ? 'Desativar' : 'Ativar'}}</button>
+                </li>
+              }
+            </ul>
+          </section>
+        } @else {
+          <section class="quiet-card"><p>O cadastro de atendentes e a mudança de permissões ficam com o administrador de TI.</p></section>
+        }
+      </div>
+    }
+
+    @if (page==='perfil') {
+      <section class="quiet-card account-card">
+        <div class="account-id">
+          <span class="avatar">{{initials}}</span>
+          <div><h2>{{user.name}}</h2><p>{{roleLabel}}</p></div>
+        </div>
+        <dl class="account-facts">
+          <div><dt>E-mail</dt><dd>{{user.email}}</dd></div>
+          <div><dt>Função</dt><dd>{{roleLabel}}</dd></div>
+          <div><dt>Departamento</dt><dd>{{user.department}}</dd></div>
+        </dl>
+        <p>Nome, e-mail e departamento são alterados pelo administrador de TI.</p>
+        <h2>Senha</h2>
+        <form class="account-form" (ngSubmit)="changePassword()">
+          <label>Senha atual<input [(ngModel)]="account.currentPassword" name="currentPassword" type="password" autocomplete="current-password" required></label>
+          <label>Nova senha<input [(ngModel)]="account.newPassword" name="newPassword" type="password" autocomplete="new-password" required minlength="12"></label>
+          <label>Confirmar senha<input [(ngModel)]="account.confirm" name="confirm" type="password" autocomplete="new-password" required minlength="12"></label>
+          <button type="submit" [disabled]="busy">Alterar senha</button>
+          <small>A nova senha precisa ter de 12 a 72 caracteres, com maiúsculas, minúsculas e números. Ao salvar, a sessão é encerrada.</small>
+        </form>
+      </section>
+    }
+
+    @if (page==='configuracoes') {
+      <div class="team-grid">
+        <section>
+          <h2>Sistema</h2>
+          <p class="desk-wait">Chamado Rápido, central de atendimento da Tecnologia da Informação.</p>
+          <h2>Permissões</h2>
+          <ul class="admin-list">
+            <li><div><strong>Atendente de TI</strong><small>Vê os chamados, assume, responde, transfere, atualiza o status e consulta o histórico.</small></div></li>
+            <li><div><strong>Administrador de TI</strong><small>Faz o que o atendente faz e também cadastra a equipe, os departamentos e acompanha a integração.</small></div></li>
+          </ul>
+          <div class="whatsapp-box">
+            <h2>WhatsApp</h2>
+            <p>{{whatsappNotice}} O navegador não recebe o token.</p>
+          </div>
+        </section>
+        @if (admin) {
+          <section>
+            <h2>Departamentos</h2>
+            <form class="admin-form compact" (ngSubmit)="createDepartment()">
+              <input [(ngModel)]="newDepartment" name="dname" placeholder="Nome do departamento" aria-label="Nome do departamento">
+              <button type="submit" [disabled]="busy">Cadastrar</button>
+            </form>
+            <ul class="admin-list">
+              @for (item of departments; track item.id) {
+                <li>
+                  <strong>{{item.name}}</strong>
+                  <button type="button" (click)="toggleDepartment(item)" [disabled]="busy">{{item.active ? 'Desativar' : 'Ativar'}}</button>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </div>
+    }
+  </section>
+</div>
+

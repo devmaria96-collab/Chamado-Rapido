@@ -32,6 +32,13 @@ public class UserService {
     if(active.stream().anyMatch(u->u.role==Role.ADMIN))out.add(Map.of("id","admin","name","Administração"));
     return out;
   }
+  public static String firstName(String name){if(name==null)return "";String trimmed=name.trim().replaceAll("\\s+"," ");if(trimmed.isEmpty())return "";int space=trimmed.indexOf(' ');return (space<0?trimmed:trimmed.substring(0,space)).toLowerCase(Locale.ROOT);}
+  public String emailForName(String raw){
+    String wanted=firstName(raw);
+    if(wanted.isEmpty()||wanted.length()>50)return "";
+    List<User> matches=users.findByActiveTrue().stream().filter(UserService::staff).filter(u->firstName(u.name).equals(wanted)).toList();
+    return matches.size()==1?matches.get(0).email:"";
+  }
   public String emailForSector(String sector){
     if(sector==null||sector.isBlank())return "";
     List<User> active=users.findByActiveTrue();

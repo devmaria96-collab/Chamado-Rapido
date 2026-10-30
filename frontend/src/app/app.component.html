@@ -5,52 +5,77 @@
     <img class="gate-bg" src="assets/login-bg.jpg" alt="">
     <section class="gate-brand"><div class="gate-logo"><img src="assets/logo-original.png" alt="Chamado Rápido"></div><p>Tecnologia que simplifica, suporte que resolve.</p></section>
     <section class="gate-panel"><div class="gate-card">
-      <h1>Acesse o sistema</h1>
-      <p>Selecione seu setor e digite a senha</p>
+      <h1>Central de atendimento</h1>
+      <p>Acesso exclusivo da equipe de Tecnologia da Informação</p>
       <form (ngSubmit)="login()">
-        <label for="sector">Setor</label>
-        <div class="gate-field"><ui-icon name="user"/><select id="sector" name="sector" [(ngModel)]="sector" required><option value="" disabled>Selecione seu setor</option>@for(s of sectors; track s.id){<option [value]="s.id">{{s.name}}</option>}</select><ui-icon name="chevronDown"/></div>
-        <label for="password">Senha</label>
-        <div class="gate-field"><ui-icon name="lock"/><input id="password" name="password" [type]="showPassword?'text':'password'" [(ngModel)]="password" required autocomplete="current-password" placeholder="Digite a senha do seu setor"><button type="button" (click)="showPassword=!showPassword" [attr.aria-label]="showPassword?'Ocultar senha':'Mostrar senha'"><ui-icon name="eye"/></button></div>
+        <label for="nome">Nome</label>
+        <div class="gate-field"><ui-icon name="user"/><input id="nome" name="nome" type="text" [(ngModel)]="nome" maxlength="50" autocomplete="username" placeholder="Digite seu primeiro nome" required></div>
+        <label for="senha">Senha</label>
+        <div class="gate-field"><ui-icon name="lock"/><input id="senha" name="senha" [type]="showPassword?'text':'password'" [(ngModel)]="senha" required autocomplete="current-password" placeholder="Digite sua senha"><button type="button" (click)="showPassword=!showPassword" [attr.aria-label]="showPassword?'Ocultar senha':'Mostrar senha'"><ui-icon name="eye"/></button></div>
         @if(loginError){<p class="gate-error" role="alert">{{loginError}}</p>}
-        <button class="gate-submit" type="submit" [disabled]="busy"><ui-icon name="arrow"/>{{busy?'Entrando...':'Entrar'}}</button>
+        <button class="gate-submit" type="submit" [disabled]="busy || !nome.trim() || !senha">{{busy?'Entrando...':'Entrar'}}</button>
       </form>
     </div></section>
   </main>
-} @else if (atendimento && !user.mustChangePassword) {
+} @else if (staff && deskMode) {
+  <app-desk [user]="user" (leave)="logout()"></app-desk>
+} @else if (!staff && !legacyIntake) {
+  <main class="hold">
+    <img src="assets/logo-original.png" alt="Chamado Rápido">
+    <h1>Central exclusiva da TI</h1>
+    <p>Esta área é da equipe de Tecnologia da Informação. A abertura de chamados pelo site está pausada e continua disponível no sistema para ser reativada.</p>
+    <p>O WhatsApp ainda não está conectado.</p>
+    <button type="button" (click)="logout()">Sair</button>
+  </main>
+} @else if (atendimento || !staff) {
   <main class="studio">
     <img class="studio-bg" src="assets/login-bg.jpg" alt="">
     <aside class="studio-side">
       <div class="studio-logo"><img src="assets/logo-original.png" alt="Chamado Rápido"></div>
       <p>Tecnologia que simplifica, suporte que resolve.</p>
-      <div class="studio-sector"><ui-icon [name]="user.department.toLowerCase().includes('compra')?'cart':'department'"/><span>Setor: {{user.department}}</span><ui-icon name="chevronDown"/></div>
-      <button type="button" class="studio-open" [class.quiet]="studioPane!=='novo'" (click)="focusForm()"><ui-icon name="plus"/>Abrir chamado</button>
+      <div class="studio-sector"><ui-icon [name]="user.department.toLowerCase().includes('compra')?'cart':'department'"/><span>Setor: {{user.department}}</span></div>
+      <button type="button" class="studio-open" [class.quiet]="studioPane!=='novo'" (click)="focusForm()"><ui-icon name="plus"/>Novo chamado</button>
       <button type="button" class="studio-nav" [class.active]="studioPane==='meus'" (click)="showMine()"><ui-icon name="ticket"/>Meus chamados</button>
-      <button type="button" class="studio-nav" (click)="showChat()"><ui-icon name="chat"/>Chatbot de ajuda</button>
       <button type="button" class="studio-exit" (click)="logout()" [disabled]="busy"><ui-icon name="logout"/>Sair</button>
     </aside>
     <div class="studio-userwrap">
-      <button type="button" class="studio-user" (click)="staff&&(accountOpen=!accountOpen)" [attr.aria-expanded]="accountOpen">
-        <span class="avatar">{{initials(user.name)}}</span>
-        <span><strong>{{user.name}}</strong><small>{{user.department}}</small></span>
-        <ui-icon name="chevronDown"/>
-      </button>
-      @if(accountOpen&&staff){<div class="studio-menu"><button type="button" (click)="openPainel()">Painel da TI</button></div>}
+      <div class="studio-user" aria-label="Departamento autenticado">
+        <span class="avatar">{{initials(user.department)}}</span>
+        <strong>Olá, {{user.department}}!</strong>
+      </div>
     </div>
-    <section class="studio-card" id="novo-chamado" [class.studio-board]="studioPane==='meus'&&!deskDetail">
+    <section class="studio-card" id="novo-chamado" [class.studio-board]="studioPane==='meus'">
       @if(studioPane==='meus'){
         @if(deskDetail){
           <header class="studio-head">
             <button type="button" class="studio-back" (click)="deskDetail=null" aria-label="Voltar para a lista"><ui-icon name="chevron"/></button>
-            <div><h1>{{deskDetail.ticket.protocol}}</h1><p>{{deskDetail.ticket.title}}</p></div>
+            <div><p class="studio-protocol">{{deskDetail.ticket.protocol}}</p><h1>{{deskDetail.ticket.title}}</h1></div>
           </header>
-          <div class="studio-badges"><span>{{statusLabels[deskDetail.ticket.status]}}</span><span>{{priorityLabels[deskDetail.ticket.priority]}}</span><span>{{deadline(deskDetail.ticket)}}</span></div>
+          <section class="studio-status" [attr.data-status]="deskDetail.ticket.status">
+            <span class="studio-status-mark"><ui-icon [name]="statusIcon(deskDetail.ticket.status)"/></span>
+            <div>
+              <small>Status do chamado</small>
+              <strong>{{statusLabels[deskDetail.ticket.status]}}</strong>
+              <p>{{statusNote(deskDetail.ticket.status)}}</p>
+              @if(deskDetail.ticket.resolvedAt){<time [attr.datetime]="deskDetail.ticket.resolvedAt">Resolvido em {{deskDetail.ticket.resolvedAt|date:'dd/MM/yyyy HH:mm'}}</time>}
+            </div>
+          </section>
+          <dl class="studio-facts">
+            <div><dt>Solicitante</dt><dd>{{deskDetail.ticket.requester}}</dd></div>
+            <div><dt>Departamento</dt><dd>{{deskDetail.ticket.department}}</dd></div>
+            <div><dt>Categoria</dt><dd>{{deskDetail.ticket.category}}</dd></div>
+            <div><dt>Prioridade</dt><dd>{{priorityLabels[deskDetail.ticket.priority]}}</dd></div>
+            <div><dt>Aberto em</dt><dd>{{deskDetail.ticket.createdAt|date:'dd/MM/yyyy HH:mm'}}</dd></div>
+            @if(deskDetail.ticket.resolvedAt){<div><dt>Resolvido em</dt><dd>{{deskDetail.ticket.resolvedAt|date:'dd/MM/yyyy HH:mm'}}</dd></div>}
+            <div><dt>Responsável</dt><dd>{{deskDetail.ticket.assignee||'Aguardando a TI'}}</dd></div>
+          </dl>
+          <h2>Descrição do problema</h2>
           <p class="studio-copy">{{deskDetail.ticket.description}}</p>
-          <dl class="studio-facts"><div><dt>Categoria</dt><dd>{{deskDetail.ticket.category}}</dd></div><div><dt>Aberto em</dt><dd>{{deskDetail.ticket.createdAt|date:'dd/MM/yyyy HH:mm'}}</dd></div><div><dt>Equipamento</dt><dd>{{deskDetail.ticket.equipment||'Não informado'}}</dd></div><div><dt>Responsável</dt><dd>{{deskDetail.ticket.assignee||'Aguardando a TI'}}</dd></div></dl>
-          @if(deskDetail.ticket.solution){<p class="studio-solution"><strong>Solução</strong>{{deskDetail.ticket.solution}}</p>}
-          <h2>Conversa</h2>
-          <div class="studio-notes">@for(c of deskDetail.comments; track c.id){@if(!c.internal||staff){<article><strong>{{c.author}}</strong><time>{{c.createdAt|date:'dd/MM HH:mm'}}</time><p>{{c.body}}</p></article>}}@empty{<p class="studio-empty">Ainda não há mensagens neste chamado.</p>}</div>
-          @if(!['FECHADO','CANCELADO'].includes(deskDetail.ticket.status)){<form class="studio-reply" (ngSubmit)="commentMine()"><textarea name="reply" [(ngModel)]="commentText" rows="3" minlength="2" maxlength="6000" required placeholder="Escreva uma mensagem para a TI. Não compartilhe senhas."></textarea><button type="submit" [disabled]="busy||commentText.trim().length<2">Enviar</button></form>}
+          @if(deskDetail.ticket.solution){<p class="studio-solution"><strong>Solução registrada pela TI</strong>{{deskDetail.ticket.solution}}</p>}
+          @if(deskDetail.attachments.length){
+            <h2>Anexo</h2>
+            <div class="studio-files">@for(a of deskDetail.attachments; track a.id){<button type="button" class="studio-file" (click)="downloadAttachment(a.id,a.name)"><ui-icon name="file"/><span><strong>{{a.name}}</strong><small>{{a.size/1024|number:'1.0-0'}} KB</small></span></button>}</div>
+          }
         } @else {
           <header class="studio-head"><span class="studio-mark"><ui-icon name="ticket"/></span><div><h1>Meus chamados</h1><p>Acompanhe as solicitações que você abriu para a TI.</p></div></header>
           @if(mineLoading){<p class="studio-empty">Carregando seus chamados...</p>}
@@ -59,8 +84,12 @@
           }
         }
       } @else {
-      <header class="studio-head"><span class="studio-mark"><ui-icon name="file"/></span><div><h1>Novo chamado</h1><p>Preencha os dados abaixo para abrir sua solicitação para o time de TI.</p></div></header>
-      <form (ngSubmit)="submitTicket()">
+      <header class="studio-head"><span class="studio-mark"><ui-icon name="file"/></span><div><h1>Novo chamado</h1><p>Conte o que aconteceu. A equipe de TI recebe a solicitação do seu setor.</p></div></header>
+      <form novalidate (ngSubmit)="submitTicket()">
+        <label for="departamento">Departamento</label>
+        <input id="departamento" [value]="user.department" readonly tabindex="-1" aria-readonly="true">
+        <label for="solicitante">Nome do solicitante <span>*</span></label>
+        <input id="solicitante" name="requesterName" [(ngModel)]="ticketForm.requesterName" required minlength="3" maxlength="120" placeholder="Digite seu nome completo" autocomplete="name">
         <label for="assunto">Assunto <span>*</span></label>
         <input id="assunto" name="title" [(ngModel)]="ticketForm.title" required minlength="5" maxlength="180" placeholder="Descreva brevemente o problema">
         <div class="studio-split">
@@ -73,82 +102,45 @@
             <div class="studio-select"><select id="deskPriority" name="priority" [(ngModel)]="ticketForm.priority" required><option value="" disabled>Selecione a prioridade</option>@for(p of priorities; track p){<option [value]="p">{{priorityLabels[p]}}</option>}</select><ui-icon name="chevronDown"/></div>
           </div>
         </div>
-        <label for="equipamento">Equipamento ou sistema (opcional)</label>
-        <input id="equipamento" name="equipment" [(ngModel)]="ticketForm.equipment" maxlength="120" placeholder="Ex: Computador, Impressora, SAP, E-mail, etc.">
         <label for="relato">Descrição do problema <span>*</span></label>
-        <textarea id="relato" name="description" [(ngModel)]="ticketForm.description" required minlength="15" maxlength="12000" rows="4" placeholder="Descreva o problema detalhadamente..."></textarea>
+        <textarea id="relato" name="description" [(ngModel)]="ticketForm.description" required minlength="15" maxlength="12000" rows="6" placeholder="Descreva o que está acontecendo com o máximo de detalhes possível"></textarea>
         <label for="anexo">Anexo (opcional)</label>
-        <label class="studio-drop" [class.over]="dragging" (dragover)="$event.preventDefault();dragging=true" (dragleave)="dragging=false" (drop)="dropFiles($event)">
-          <ui-icon name="paperclip"/>
-          <span><strong>{{newFiles.length?newFiles[0].name:'Clique para anexar um arquivo'}}</strong><small>{{newFiles.length>1?newFiles.length+' arquivos selecionados':'ou arraste e solte aqui'}}</small></span>
-          <small class="studio-formats">Formatos: PDF, PNG, JPG, TXT (máx. 5 MB)</small>
-          <input id="anexo" type="file" multiple accept=".png,.jpg,.jpeg,.pdf,.txt" (change)="fileSelection($event)">
-        </label>
-        @if(ticketForm.triageId){<p class="studio-hint">O resumo da conversa com o assistente será anexado a este chamado.</p>}
-        <button class="studio-send" type="submit" [disabled]="busy"><ui-icon name="send"/>{{opening?'Enviando...':'Abrir chamado'}}</button>
+        @if(attachmentPreview){
+          <div class="studio-preview">
+            <img [src]="attachmentPreview" alt="Prévia da imagem selecionada">
+            <span><strong>{{newFiles[0].name}}</strong><small>PNG, JPG ou JPEG · até 5 MB</small></span>
+            <button type="button" (click)="clearAttachment()">Remover</button>
+          </div>
+        } @else {
+          <label class="studio-drop" [class.over]="dragging" (dragover)="$event.preventDefault();dragging=true" (dragleave)="dragging=false" (drop)="dropFiles($event)">
+            <ui-icon name="paperclip"/>
+            <span><strong>Clique para anexar uma imagem</strong><small>ou arraste e solte aqui</small></span>
+            <small class="studio-formats">PNG, JPG ou JPEG (máx. 5 MB)</small>
+            <input id="anexo" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" (change)="fileSelection($event)">
+          </label>
+        }
+        @if(formError){<p class="studio-error">{{formError}}</p>}
+        <button class="studio-send" type="submit" [disabled]="busy||opening"><ui-icon name="send"/>{{opening?'Enviando...':'Abrir chamado'}}</button>
       </form>
       }
     </section>
-    @if(studioPane!=='meus'||deskDetail){<section class="studio-card studio-chat" id="assistente">
-      <header class="studio-head">
-        <span class="studio-mark"><ui-icon name="chat"/></span>
-        <div><h1>Assistente de triagem</h1><p>Tire suas dúvidas e veja se seu problema pode ser resolvido rapidamente.</p></div>
-        <button type="button" class="studio-clear" (click)="clearGuide()"><ui-icon name="trash"/>Limpar conversa</button>
-      </header>
-      <div class="studio-thread">
-        <article class="studio-msg bot">
-          <span class="studio-avatar"><ui-icon name="bot"/></span>
-          <div><p>Olá, eu sou o Pardo, assistente virtual do Chamado Rápido.<br>Seu problema é com internet, impressora, computador ou sistema?</p><time>{{greetTime}}</time></div>
-        </article>
-        @if(guide==='welcome'){
-          <div class="studio-topics">@for(topic of topics; track topic.id){<button type="button" (click)="pickTopic(topic)">{{topic.user}}</button>}</div>
-        } @else if(guideTopic) {
-          <article class="studio-msg user">
-            <div><p>{{guideTopic.user}}</p><time>{{guideTime}}</time></div>
-            <span class="studio-avatar person"><ui-icon name="user"/></span>
-          </article>
-          <article class="studio-msg bot">
-            <span class="studio-avatar"><ui-icon name="bot"/></span>
-            <div><p>{{guideTopic.intro}}</p><time>{{guideTime}}</time></div>
-          </article>
-          <ol class="studio-tips">@for(tip of guideTopic.tips; track tip){<li>{{tip}}</li>}</ol>
-          @if(guide==='tips'){
-            <article class="studio-msg bot">
-              <span class="studio-avatar"><ui-icon name="bot"/></span>
-              <div><p>Isso resolveu seu problema?</p><time>{{guideTime}}</time></div>
-            </article>
-            <div class="studio-resolve">
-              <button type="button" class="yes" (click)="finishGuide(true)" [disabled]="busy"><ui-icon name="check"/>Sim</button>
-              <button type="button" class="no" (click)="finishGuide(false)" [disabled]="busy">Não, abrir chamado<ui-icon name="arrow"/></button>
-            </div>
-          } @else {
-            <article class="studio-msg bot">
-              <span class="studio-avatar"><ui-icon name="bot"/></span>
-              <div><p>{{guideReply}}</p><time>{{guideTime}}</time></div>
-            </article>
-          }
-        }
-      </div>
-    </section>}
   </main>
-} @else {
+} @else if (staff && !atendimento) {
   <div class="app-shell">
     @if(mobileMenu){<button class="sidebar-scrim" aria-label="Fechar menu" (click)="mobileMenu=false"></button>}
     <aside class="sidebar" [class.open]="mobileMenu">
       <a href="#dashboard" class="brand-card" (click)="navigate('dashboard')"><img src="assets/logo.png" alt="Chamado Rápido"></a>
       <div class="workspace-tag"><span class="workspace-mark">TI</span><div><strong>Central de serviços</strong><small>Workspace corporativo</small></div><span class="live-dot"></span></div>
       <nav aria-label="Navegação principal"><span class="nav-label">PRINCIPAL</span>
-        <button type="button" (click)="voltarAtendimento()"><ui-icon name="chat"/>Atendimento</button>
+        <button type="button" (click)="voltarAtendimento()"><ui-icon name="file"/>Atendimento</button>
         <button [class.active]="view==='dashboard'" (click)="navigate('dashboard')"><ui-icon name="dashboard"/>Visão geral</button>
         <button [class.active]="view==='tickets'" (click)="navigate('tickets')"><ui-icon name="ticket"/>{{staff?'Chamados':'Meus chamados'}}<span class="nav-count">{{summary.active}}</span></button>
         @if(staff){<button [class.active]="view==='board'" (click)="navigate('board')"><ui-icon name="board"/>Quadro de atendimento</button>}
-        <button [class.active]="view==='assistant'" (click)="navigate('assistant')"><ui-icon name="bolt"/>Assistente<span class="mini-tag">RÁPIDO</span></button>
         <button [class.active]="view==='knowledge'" (click)="navigate('knowledge')"><ui-icon name="book"/>Base de conhecimento</button>
         @if(staff){<span class="nav-label">GESTÃO</span><button [class.active]="view==='departments'" (click)="navigate('departments')"><ui-icon name="department"/>Departamentos</button><button [class.active]="view==='reports'" (click)="navigate('reports')"><ui-icon name="chart"/>Relatórios</button>}
         @if(admin){<button [class.active]="view==='users'" (click)="navigate('users')"><ui-icon name="users"/>Pessoas e acessos</button>}
         <button [class.active]="view==='settings'" (click)="navigate('settings')"><ui-icon name="settings"/>Configurações</button>
       </nav>
-      <div class="sidebar-help"><span class="help-symbol"><ui-icon name="chat"/></span><strong>Uma ajuda antes do chamado?</strong><p>Nosso assistente pode encontrar a solução com você.</p><button (click)="navigate('assistant')">Conversar agora<ui-icon name="arrow"/></button></div>
       <div class="sidebar-user"><span class="avatar yellow">{{initials(user.name)}}</span><div><strong>{{user.name}}</strong><small>{{roles[user.role]}}</small></div><button class="icon-button" (click)="logout()" [disabled]="busy" aria-label="Sair da conta" title="Sair"><ui-icon name="logout"/></button></div>
     </aside>
     <div class="workspace">
@@ -160,7 +152,7 @@
         <div class="page-heading"><div><span class="eyebrow">{{view==='dashboard'?'CENTRAL DE SERVIÇOS DE TI':'CHAMADO RÁPIDO'}}</span><h1>{{view==='dashboard'?'Olá, '+firstName+'. Vamos simplificar?':heading.title}}</h1><p>{{heading.subtitle}}</p></div><div class="page-actions">@if(view==='dashboard'||view==='reports'){<select [(ngModel)]="range" (change)="rangeChange()" aria-label="Período dos indicadores"><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="0">Todo o período</option></select>}@if(view==='users'){<button class="btn primary" (click)="editUser()"><ui-icon name="plus"/>Adicionar pessoa</button>}@else if(view==='knowledge'&&admin){<button class="btn primary" (click)="editArticle()"><ui-icon name="plus"/>Novo artigo</button>}@else if(view==='reports'){<button class="btn primary" (click)="exportReport()" [disabled]="busy"><ui-icon name="download"/>Exportar CSV</button>}@else if(!user.mustChangePassword){<button class="btn primary" (click)="newTicket()"><ui-icon name="plus"/>Novo chamado</button>}</div></div>
         @if(loading){<div class="loading-bar" aria-label="Carregando"></div>}
         @if(view==='dashboard'){
-          <section class="welcome-banner"><div><span class="banner-tag"><ui-icon name="bolt"/> SUPORTE NO SEU RITMO</span><h2>Seu dia com menos interrupções.</h2><p>Conte com a tecnologia. Conte com a nossa equipe.</p></div><button class="btn banner-button" (click)="navigate('assistant')">Encontrar uma solução<ui-icon name="arrow"/></button><img class="banner-mascot" src="assets/mascote.png" alt=""></section>
+          <section class="welcome-banner"><div><span class="banner-tag"><ui-icon name="bolt"/> SUPORTE NO SEU RITMO</span><h2>Seu dia com menos interrupções.</h2><p>Conte com a tecnologia. Conte com a nossa equipe.</p></div><button class="btn banner-button" (click)="newTicket()">Abrir um chamado<ui-icon name="arrow"/></button><img class="banner-mascot" src="assets/mascote.png" alt=""></section>
           <div class="stats-grid">
             <section class="stat-card"><span class="stat-icon blue"><ui-icon name="ticket"/></span><span class="stat-label">Chamados no período</span><strong>{{summary.total}}</strong><small>Solicitações registradas</small></section>
             <section class="stat-card"><span class="stat-icon gold"><ui-icon name="clock"/></span><span class="stat-label">Em aberto</span><strong>{{summary.active}}</strong><small><span class="tiny-dot yellow-dot"></span>Em atendimento ou na fila</small></section>
@@ -184,11 +176,7 @@
           <div class="section-intro"><p><strong>{{departments.length-1}}</strong> setores solicitantes e uma equipe de TI conectada a todos eles.</p>@if(admin){<button class="btn secondary" (click)="editCatalog('departments')"><ui-icon name="plus"/>Adicionar setor</button>}</div><div class="department-grid">@for(d of departments;track d.id){<section class="department-card"><div class="department-top"><span class="department-icon"><ui-icon name="department"/></span><span class="badge" [class.inactive]="!d.active">{{d.active?'Ativo':'Inativo'}}</span></div><h2>{{d.name}}</h2><p>Conectado à central de TI</p><div class="department-metrics"><div><strong>{{d.total}}</strong><span>Chamados</span></div><div><strong>{{d.open}}</strong><span>Em aberto</span></div><div><strong [class.danger]="d.overdue>0">{{d.overdue}}</strong><span>Em atraso</span></div></div><footer><button class="text-button" (click)="filters.department=''+d.id;filters.q='';filters.status='';filters.priority='';filters.overdue='';mine=false;page=0;navigate('tickets')">Ver chamados<ui-icon name="arrow"/></button>@if(admin){<button class="icon-button" (click)="editCatalog('departments',d)" [attr.aria-label]="'Editar '+d.name"><ui-icon name="edit"/></button>}</footer></section>}</div>
         }
         @if(view==='knowledge'){
-          <section class="knowledge-hero"><span class="knowledge-icon"><ui-icon name="book"/></span><h2>Uma boa resposta pode mudar seu dia.</h2><p>Encontre orientações antes de abrir um chamado.</p><div class="input-icon"><ui-icon name="search"/><input [(ngModel)]="articleQuery" placeholder="Busque por internet, impressora, acesso..." aria-label="Pesquisar artigos"></div></section><div class="category-pills"><button [class.selected]="!articleCategory" (click)="articleCategory=''">Todos os artigos</button>@for(c of articleCategories;track c){<button [class.selected]="articleCategory===c" (click)="articleCategory=c">{{c}}</button>}</div><div class="article-grid">@for(a of filteredArticles;track a.id){<button class="article-card" (click)="activeArticle=a"><div><span class="article-icon"><ui-icon name="file"/></span><span class="article-category">{{a.category}}</span></div><h3>{{a.title}}</h3><p>{{a.excerpt}}</p><footer><span>{{a.active?'Leitura rápida':'Rascunho / inativo'}}</span><span>Ler artigo<ui-icon name="arrow"/></span></footer></button>}@empty{<div class="empty"><ui-icon name="search"/><h3>Nenhum artigo encontrado.</h3><p>Tente outra palavra ou converse com o assistente.</p></div>}</div>
-        }
-        @if(view==='assistant'){
-          <div class="assistant-layout"><section class="panel assistant-chat"><header class="assistant-header"><span class="bot-avatar"><img src="assets/mascote.png" alt=""></span><div><h2>Assistente Rápido</h2><p><span class="live-dot"></span>Triagem guiada · orientações seguras</p></div>@if(triage){<button class="icon-button" (click)="resetTriage()" aria-label="Iniciar outra triagem" title="Nova conversa"><ui-icon name="refresh"/></button>}</header>
-            <div class="chat-body" aria-live="polite">@if(!triage){<div class="bot-welcome"><span class="bot-wave"><ui-icon name="chat"/></span><h2>Olá, {{firstName}}! Como posso ajudar?</h2><p>Escolha o assunto. Vou fazer algumas perguntas para entender o que está acontecendo.</p></div><div class="triage-categories">@for(c of triageCategories;track c.id){<button (click)="startTriage(c.id)" [disabled]="busy"><ui-icon [name]="c.icon"/><strong>{{c.title}}</strong><small>{{c.desc}}</small><ui-icon name="chevron"/></button>}</div>}@else{@for(m of messages;track $index){<div class="chat-message" [class.from-user]="m.side==='user'">@if(m.side==='bot'){<span class="chat-bot-mark"><ui-icon name="bolt"/></span>}<p>{{m.text}}</p></div>}<div class="chat-options">@for(option of triage.options;track option.id){<button class="btn secondary" (click)="answerTriage(option)" [disabled]="busy">{{option.label}}<ui-icon name="arrow"/></button>}</div>@if(triage.result==='ENCAMINHADO'&&!triage.ticketId){<div class="chat-result"><ui-icon name="ticket"/><strong>Vamos levar isso para a equipe de TI.</strong><p>As verificações feitas aqui acompanharão sua solicitação.</p><button class="btn primary" (click)="newTicket(true)">Abrir chamado com o resumo<ui-icon name="arrow"/></button></div>}@if(triage.result==='RESOLVIDO'){<div class="chat-result success-result"><ui-icon name="checkCircle"/><strong>Problema resolvido, dia seguindo!</strong><p>Atendimento registrado sem necessidade de abrir chamado.</p><button class="btn secondary" (click)="resetTriage()">Iniciar outra conversa</button></div>}@if(triage.ticketId){<button class="btn primary" (click)="openTicket(triage.ticketId)">Acompanhar o chamado criado<ui-icon name="arrow"/></button>}}</div><footer class="assistant-footer"><ui-icon name="shield"/>Nunca informe sua senha. Este assistente utiliza fluxos predefinidos, não IA generativa.</footer></section><aside class="assistant-info"><div class="panel"><span class="stat-icon gold"><ui-icon name="bolt"/></span><h3>Tecnologia com acolhimento.</h3><p>Se a orientação não resolver, a equipe humana de TI assume o atendimento.</p><hr><strong>Prefere falar com a TI?</strong><p>Você pode abrir um chamado a qualquer momento.</p><button class="btn secondary full" (click)="newTicket()">Abrir chamado diretamente</button></div><div class="safety-note"><ui-icon name="alert"/><p>Risco elétrico, fumaça ou cheiro de queimado? Interrompa o uso e avise imediatamente a equipe responsável. Não manipule o equipamento.</p></div></aside></div>
+          <section class="knowledge-hero"><span class="knowledge-icon"><ui-icon name="book"/></span><h2>Uma boa resposta pode mudar seu dia.</h2><p>Encontre orientações antes de abrir um chamado.</p><div class="input-icon"><ui-icon name="search"/><input [(ngModel)]="articleQuery" placeholder="Busque por internet, impressora, acesso..." aria-label="Pesquisar artigos"></div></section><div class="category-pills"><button [class.selected]="!articleCategory" (click)="articleCategory=''">Todos os artigos</button>@for(c of articleCategories;track c){<button [class.selected]="articleCategory===c" (click)="articleCategory=c">{{c}}</button>}</div><div class="article-grid">@for(a of filteredArticles;track a.id){<button class="article-card" (click)="activeArticle=a"><div><span class="article-icon"><ui-icon name="file"/></span><span class="article-category">{{a.category}}</span></div><h3>{{a.title}}</h3><p>{{a.excerpt}}</p><footer><span>{{a.active?'Leitura rápida':'Rascunho / inativo'}}</span><span>Ler artigo<ui-icon name="arrow"/></span></footer></button>}@empty{<div class="empty"><ui-icon name="search"/><h3>Nenhum artigo encontrado.</h3><p>Tente outra palavra.</p></div>}</div>
         }
         @if(view==='reports'){
           <div class="stats-grid"><section class="stat-card"><span class="stat-label">Total no período</span><strong>{{summary.total}}</strong><small>Chamados registrados</small></section><section class="stat-card"><span class="stat-label">Tempo médio de solução</span><strong>{{summary.resolved?summary.averageResolutionHours+' h':'—'}}</strong><small>Da abertura à resolução</small></section><section class="stat-card"><span class="stat-label">Resoluções dentro do prazo</span><strong>{{summary.resolved?summary.slaPercent+'%':'—'}}</strong><small>{{summary.resolved}} chamados resolvidos</small></section><section class="stat-card"><span class="stat-label">Satisfação</span><strong>{{summary.averageRating||'—'}}<small>/ 5</small></strong><small>Avaliações dos solicitantes</small></section></div>
@@ -201,13 +189,13 @@
         @if(view==='settings'){
           @if(user.mustChangePassword){<div class="inline-error"><ui-icon name="lock"/>Altere sua senha temporária para liberar o acesso à plataforma.</div>}
           <div class="settings-grid"><section class="panel settings-panel"><h2>Minha conta</h2><div class="profile-summary"><span class="avatar large">{{initials(user.name)}}</span><div><h3>{{user.name}}</h3><p>{{user.email}}</p><span class="role-badge">{{roles[user.role]}}</span></div></div><div class="setting-line"><span>Departamento</span><strong>{{user.department}}</strong></div><div class="setting-line"><span>Aparência</span><button class="btn secondary compact" (click)="toggleTheme()"><ui-icon [name]="theme==='light'?'moon':'sun'"/>{{theme==='light'?'Ativar tema escuro':'Ativar tema claro'}}</button></div><p class="muted">Para alterar nome, e-mail ou departamento, fale com o administrador.</p></section><section class="panel settings-panel"><h2>Segurança da conta</h2><p class="muted">A troca de senha encerra suas sessões anteriores.</p><form (ngSubmit)="changePassword()" #passwordForm="ngForm"><label for="oldPass">Senha atual</label><input id="oldPass" name="currentPassword" type="password" [(ngModel)]="account.currentPassword" autocomplete="current-password" required><label for="newPass">Nova senha</label><input id="newPass" name="newPassword" type="password" [(ngModel)]="account.newPassword" autocomplete="new-password" minlength="12" maxlength="72" required><small class="field-help">Mínimo de 12 caracteres, com maiúsculas, minúsculas e números. Limite de 72 bytes.</small><label for="confirmPass">Confirmar nova senha</label><input id="confirmPass" name="confirmPassword" type="password" [(ngModel)]="account.confirm" autocomplete="new-password" required><button class="btn primary" type="submit" [disabled]="busy||passwordForm.invalid">Alterar senha<ui-icon name="shield"/></button></form></section></div>
-          @if(admin&&!user.mustChangePassword){<div class="settings-grid"><section class="panel settings-panel"><div class="panel-title"><h2>Departamentos</h2><button class="icon-button" (click)="editCatalog('departments')" aria-label="Adicionar departamento"><ui-icon name="plus"/></button></div>@for(d of catalogs.departments;track d.id){<div class="catalog-line"><span>{{d.name}} @if(!d.active){<small>(inativo)</small>}</span><button class="icon-button" (click)="editCatalog('departments',d)" [attr.aria-label]="'Editar '+d.name"><ui-icon name="edit"/></button></div>}</section><section class="panel settings-panel"><div class="panel-title"><h2>Categorias de atendimento</h2><button class="icon-button" (click)="editCatalog('categories')" aria-label="Adicionar categoria"><ui-icon name="plus"/></button></div>@for(c of catalogs.categories;track c.id){<div class="catalog-line"><span>{{c.name}} @if(!c.active){<small>(inativa)</small>}</span><button class="icon-button" (click)="editCatalog('categories',c)" [attr.aria-label]="'Editar '+c.name"><ui-icon name="edit"/></button></div>}<div class="sla-help"><h3>Metas de atendimento</h3><p>Crítica: 4 h · Alta: 8 h · Média: 24 h · Baixa: 72 h</p><small>Horas corridas. Configuradas em TicketRules.java.</small></div></section></div>}
+          @if(admin&&!user.mustChangePassword){<div class="settings-grid"><section class="panel settings-panel"><div class="panel-title"><h2>Departamentos</h2><button class="icon-button" (click)="editCatalog('departments')" aria-label="Adicionar departamento"><ui-icon name="plus"/></button></div>@for(d of catalogs.departments;track d.id){<div class="catalog-line"><span>{{d.name}} @if(!d.active){<small>(inativo)</small>}</span><button class="icon-button" (click)="editCatalog('departments',d)" [attr.aria-label]="'Editar '+d.name"><ui-icon name="edit"/></button></div>}</section><section class="panel settings-panel"><div class="panel-title"><h2>Categorias de atendimento</h2><button class="icon-button" (click)="editCatalog('categories')" aria-label="Adicionar categoria"><ui-icon name="plus"/></button></div>@for(c of catalogs.categories;track c.id){<div class="catalog-line"><span>{{c.name}} @if(!c.active){<small>(inativa)</small>}</span><button class="icon-button" (click)="editCatalog('categories',c)" [attr.aria-label]="'Editar '+c.name"><ui-icon name="edit"/></button></div>}<div class="sla-help"><h3>Metas de atendimento</h3><p>Urgente: 4 h · Alta: 8 h · Normal: 24 h · Baixa: 72 h</p><small>Horas corridas. Configuradas em TicketRules.java.</small></div></section></div>}
         }
         <footer class="workspace-footer"><span>Chamado Rápido <b>·</b> Tecnologia que simplifica, suporte que resolve.</span><span>Central de TI <b>·</b> v1.0</span></footer>
       </main>
     </div>
   </div>
-  <ng-template #ticketTable let-items let-compact="compact"><div class="table-wrap"><table class="ticket-table"><thead><tr><th>Chamado</th><th>Departamento</th><th>Prioridade</th><th>Status</th><th>Prazo</th><th>Responsável</th><th></th></tr></thead><tbody>@for(t of items;track t.id){<tr (click)="openTicket(t.id)"><td><button class="ticket-title" (click)="$event.stopPropagation();openTicket(t.id)"><small>{{t.protocol}} <span>· {{relative(t.createdAt)}}</span></small><strong>{{t.title}}</strong></button></td><td><span class="department-name">{{t.department}}</span></td><td><span class="priority" [attr.data-priority]="t.priority"><i></i>{{priorityLabels[t.priority]}}</span></td><td><span class="status-badge" [attr.data-status]="t.status"><i></i>{{statusLabels[t.status]}}</span></td><td><span class="deadline" [class.danger]="t.overdue"><ui-icon [name]="terminal(t)?'checkCircle':'clock'"/>{{deadline(t)}}</span></td><td><span class="assignee" [title]="t.assignee||'Aguardando atribuição'">@if(t.assignee){<span class="avatar tiny">{{initials(t.assignee)}}</span><span>{{t.assignee.split(' ')[0]}}</span>}@else{<span class="unassigned">Não atribuído</span>}</span></td><td><ui-icon name="chevron"/></td></tr>}@empty{<tr><td colspan="7"><div class="empty"><span class="empty-symbol"><ui-icon name="ticket"/></span><h3>Nenhum chamado por aqui.</h3><p>Crie sua primeira solicitação ou ajuste os filtros.</p><button class="btn primary" (click)="newTicket()"><ui-icon name="plus"/>Novo chamado</button></div></td></tr>}</tbody></table></div></ng-template>
+  <ng-template #ticketTable let-items let-compact="compact"><div class="table-wrap"><table class="ticket-table"><thead><tr><th>Chamado</th><th>Departamento</th><th>Solicitante</th><th>Prioridade</th><th>Status</th><th>Prazo</th><th>Responsável</th><th></th></tr></thead><tbody>@for(t of items;track t.id){<tr (click)="openTicket(t.id)"><td><button class="ticket-title" (click)="$event.stopPropagation();openTicket(t.id)"><small>{{t.protocol}} <span>· {{relative(t.createdAt)}}</span></small><strong>{{t.title}}</strong></button></td><td><span class="department-name">{{t.department}}</span></td><td><span class="department-name">{{t.requester}}</span></td><td><span class="priority" [attr.data-priority]="t.priority"><i></i>{{priorityLabels[t.priority]}}</span></td><td><span class="status-badge" [attr.data-status]="t.status"><i></i>{{statusLabels[t.status]}}</span></td><td><span class="deadline" [class.danger]="t.overdue"><ui-icon [name]="terminal(t)?'checkCircle':'clock'"/>{{deadline(t)}}</span></td><td><span class="assignee" [title]="t.assignee||'Aguardando atribuição'">@if(t.assignee){<span class="avatar tiny">{{initials(t.assignee)}}</span><span>{{t.assignee.split(' ')[0]}}</span>}@else{<span class="unassigned">Não atribuído</span>}</span></td><td><ui-icon name="chevron"/></td></tr>}@empty{<tr><td colspan="8"><div class="empty"><span class="empty-symbol"><ui-icon name="ticket"/></span><h3>Nenhum chamado por aqui.</h3><p>Crie sua primeira solicitação ou ajuste os filtros.</p><button class="btn primary" (click)="newTicket()"><ui-icon name="plus"/>Novo chamado</button></div></td></tr>}</tbody></table></div></ng-template>
 }
 @if(selected;as detail){
   <div class="drawer-backdrop" (click)="!busy&&(selected=null)"><section class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detailTitle" (click)="$event.stopPropagation()"><header class="drawer-header"><div><span class="eyebrow">{{detail.ticket.protocol}}</span><h2 id="detailTitle">{{detail.ticket.title}}</h2></div><button class="icon-button" (click)="selected=null" [disabled]="busy" aria-label="Fechar chamado"><ui-icon name="close"/></button></header>
@@ -225,7 +213,7 @@
 }
 @if(modal){
   <div class="modal-backdrop" (click)="!busy&&(modal='')"><section class="modal" [class.wide]="modal==='ticket'" role="dialog" aria-modal="true" aria-labelledby="modalTitle" (click)="$event.stopPropagation()"><header><div><span class="eyebrow">CHAMADO RÁPIDO</span><h2 id="modalTitle">{{modal==='ticket'?'Como podemos ajudar?':modal==='user'?(userForm.id?'Editar pessoa':'Adicionar pessoa'):modal==='article'?(articleForm.id?'Editar artigo':'Novo artigo'):(catalogType==='departments'?'Cadastro de departamento':'Cadastro de categoria')}}</h2></div><button class="icon-button" (click)="modal=''" [disabled]="busy" aria-label="Fechar formulário"><ui-icon name="close"/></button></header>
-    @if(modal==='ticket'){<form (ngSubmit)="submitTicket()" #newForm="ngForm"><div class="new-ticket-layout"><div><label for="ticketTitle">O que aconteceu? *</label><input id="ticketTitle" name="title" [(ngModel)]="ticketForm.title" minlength="5" maxlength="180" required placeholder="Ex.: Não consigo acessar o sistema de cobrança"><div class="form-grid"><div><label for="category">Categoria *</label><select id="category" name="category" [(ngModel)]="ticketForm.categoryId" required><option value="" disabled>Selecione uma categoria</option>@for(c of meta.categories;track c.id){<option [value]="c.id">{{c.name}}</option>}</select></div><div><label for="priority">Impacto / prioridade *</label><select id="priority" name="priority" [(ngModel)]="ticketForm.priority" required><option value="BAIXA">Baixa · Solicitação sem interrupção</option><option value="MEDIA">Média · Consigo continuar trabalhando</option><option value="ALTA">Alta · Meu trabalho está impedido</option><option value="CRITICA">Crítica · Várias pessoas paradas</option></select></div></div><label for="description">Conte um pouco mais *</label><textarea id="description" name="description" [(ngModel)]="ticketForm.description" minlength="15" maxlength="12000" required rows="5" placeholder="Quando começou? Qual mensagem aparece? O que você já tentou?"></textarea><div class="form-grid"><div><label for="location">Localização</label><input id="location" name="location" [(ngModel)]="ticketForm.location" maxlength="120" placeholder="Sala, andar ou estação"></div><div><label for="equipment">Equipamento / patrimônio</label><input id="equipment" name="equipment" [(ngModel)]="ticketForm.equipment" maxlength="120" placeholder="Ex.: PC-024"></div></div><label for="contact">Ramal ou contato interno</label><input id="contact" name="contact" [(ngModel)]="ticketForm.contact" maxlength="80" placeholder="Como a TI pode falar com você?"><label class="upload-zone"><ui-icon name="upload"/><strong>Clique para adicionar arquivos</strong><span>PNG, JPG, PDF ou TXT · até 5 arquivos de 5 MB</span><input type="file" multiple accept=".png,.jpg,.jpeg,.pdf,.txt" (change)="fileSelection($event)"></label>@if(newFiles.length){<div class="selected-files">@for(f of newFiles;track f.name){<span><ui-icon name="paperclip"/>{{f.name}}</span>}</div>}</div><aside class="new-ticket-guide"><span class="guide-icon"><ui-icon name="ticket"/></span><h3>Um bom relato acelera a solução.</h3><p>Seja específico e informe o impacto do problema no seu trabalho.</p><div class="requester-info"><small>SOLICITANTE</small><strong>{{user?.name}}</strong><small>DEPARTAMENTO</small><strong>{{user?.department}}</strong></div><div class="privacy-note"><ui-icon name="shield"/><p>Nunca inclua senhas, códigos de acesso ou dados pessoais de clientes.</p></div>@if(ticketForm.triageId){<div class="triage-note"><ui-icon name="checkCircle"/>O resumo do assistente será anexado automaticamente.</div>}<small>* Campos obrigatórios</small></aside></div><footer><button type="button" class="btn secondary" (click)="modal=''" [disabled]="busy">Cancelar</button><button type="submit" class="btn primary" [disabled]="busy||newForm.invalid">{{busy?'Enviando...':'Enviar chamado'}}<ui-icon name="send"/></button></footer></form>}
+    @if(modal==='ticket'){<form (ngSubmit)="submitTicket()" #newForm="ngForm"><div class="new-ticket-layout"><div><label for="solicitanteModal">Nome do solicitante *</label><input id="solicitanteModal" name="requesterName" [(ngModel)]="ticketForm.requesterName" required minlength="3" maxlength="120" placeholder="Digite seu nome completo"><label for="ticketTitle">O que aconteceu? *</label><input id="ticketTitle" name="title" [(ngModel)]="ticketForm.title" minlength="5" maxlength="180" required placeholder="Ex.: Não consigo acessar o sistema de cobrança"><div class="form-grid"><div><label for="category">Categoria *</label><select id="category" name="category" [(ngModel)]="ticketForm.categoryId" required><option value="" disabled>Selecione uma categoria</option>@for(c of meta.categories;track c.id){<option [value]="c.id">{{c.name}}</option>}</select></div><div><label for="priority">Impacto / prioridade *</label><select id="priority" name="priority" [(ngModel)]="ticketForm.priority" required><option value="BAIXA">Baixa · Solicitação sem interrupção</option><option value="MEDIA">Normal · Consigo continuar trabalhando</option><option value="ALTA">Alta · Meu trabalho está impedido</option><option value="CRITICA">Urgente · Várias pessoas paradas</option></select></div></div><label for="description">Conte um pouco mais *</label><textarea id="description" name="description" [(ngModel)]="ticketForm.description" minlength="15" maxlength="12000" required rows="5" placeholder="Quando começou? Qual mensagem aparece? O que você já tentou?"></textarea><div class="form-grid"><div><label for="location">Localização</label><input id="location" name="location" [(ngModel)]="ticketForm.location" maxlength="120" placeholder="Sala, andar ou estação"></div><div><label for="equipment">Equipamento / patrimônio</label><input id="equipment" name="equipment" [(ngModel)]="ticketForm.equipment" maxlength="120" placeholder="Ex.: PC-024"></div></div><label for="contact">Ramal ou contato interno</label><input id="contact" name="contact" [(ngModel)]="ticketForm.contact" maxlength="80" placeholder="Como a TI pode falar com você?"><label class="upload-zone"><ui-icon name="upload"/><strong>Clique para adicionar arquivos</strong><span>PNG, JPG, PDF ou TXT · até 5 arquivos de 5 MB</span><input type="file" multiple accept=".png,.jpg,.jpeg,.pdf,.txt" (change)="fileSelection($event)"></label>@if(newFiles.length){<div class="selected-files">@for(f of newFiles;track f.name){<span><ui-icon name="paperclip"/>{{f.name}}</span>}</div>}</div><aside class="new-ticket-guide"><span class="guide-icon"><ui-icon name="ticket"/></span><h3>Um bom relato acelera a solução.</h3><p>Seja específico e informe o impacto do problema no seu trabalho.</p><div class="requester-info"><small>SOLICITANTE</small><strong>{{user?.name}}</strong><small>DEPARTAMENTO</small><strong>{{user?.department}}</strong></div><div class="privacy-note"><ui-icon name="shield"/><p>Nunca inclua senhas, códigos de acesso ou dados pessoais de clientes.</p></div><small>* Campos obrigatórios</small></aside></div><footer><button type="button" class="btn secondary" (click)="modal=''" [disabled]="busy">Cancelar</button><button type="submit" class="btn primary" [disabled]="busy||newForm.invalid">{{busy?'Enviando...':'Enviar chamado'}}<ui-icon name="send"/></button></footer></form>}
     @if(modal==='user'){<form (ngSubmit)="saveUser()" #personForm="ngForm" class="simple-form"><label for="userName">Nome completo *</label><input id="userName" name="name" [(ngModel)]="userForm.name" minlength="2" maxlength="100" required><label for="userEmail">E-mail *</label><input id="userEmail" name="email" type="email" [(ngModel)]="userForm.email" maxlength="180" required><div class="form-grid"><div><label for="userDept">Departamento *</label><select id="userDept" name="department" [(ngModel)]="userForm.departmentId" required><option value="" disabled>Selecione</option>@for(d of meta.departments;track d.id){<option [ngValue]="d.id">{{d.name}}</option>}</select></div><div><label for="userRole">Perfil *</label><select id="userRole" name="role" [(ngModel)]="userForm.role" required><option value="COLABORADOR">Colaborador</option><option value="TECNICO">Técnico de TI</option><option value="ADMIN">Administrador</option></select></div></div><label for="tempPass">{{userForm.id?'Nova senha temporária (opcional)':'Senha temporária *'}}</label><input id="tempPass" name="password" type="password" [(ngModel)]="userForm.password" [required]="!userForm.id" minlength="12" maxlength="72" autocomplete="new-password"><small class="field-help">12 ou mais caracteres, maiúsculas, minúsculas e números. A troca será obrigatória no primeiro acesso.</small><label class="checkbox"><input type="checkbox" name="active" [(ngModel)]="userForm.active">Usuário ativo</label><footer><button type="button" class="btn secondary" (click)="modal=''">Cancelar</button><button class="btn primary" type="submit" [disabled]="busy||personForm.invalid">Salvar pessoa</button></footer></form>}
     @if(modal==='article'){<form (ngSubmit)="saveArticle()" #articleEdit="ngForm" class="simple-form"><label for="articleTitle">Título *</label><input id="articleTitle" name="title" [(ngModel)]="articleForm.title" minlength="5" maxlength="180" required><label for="articleCategory">Categoria *</label><input id="articleCategory" name="category" [(ngModel)]="articleForm.category" maxlength="80" required><label for="articleExcerpt">Resumo *</label><textarea id="articleExcerpt" name="excerpt" [(ngModel)]="articleForm.excerpt" maxlength="300" rows="2" required></textarea><label for="articleBody">Conteúdo (texto simples) *</label><textarea id="articleBody" name="body" [(ngModel)]="articleForm.body" minlength="20" maxlength="12000" rows="8" required></textarea><label class="checkbox"><input type="checkbox" name="active" [(ngModel)]="articleForm.active">Publicado e visível para colaboradores</label><footer><button type="button" class="btn secondary" (click)="modal=''">Cancelar</button><button class="btn primary" type="submit" [disabled]="busy||articleEdit.invalid">Salvar artigo</button></footer></form>}
     @if(modal==='catalog'){<form (ngSubmit)="saveCatalog()" #catalogEdit="ngForm" class="simple-form"><label for="catalogName">Nome *</label><input id="catalogName" name="name" [(ngModel)]="catalogForm.name" minlength="2" maxlength="80" required>@if(catalogType==='categories'){<label for="catalogDesc">Descrição</label><textarea id="catalogDesc" name="description" [(ngModel)]="catalogForm.description" maxlength="200" rows="3"></textarea>}<label class="checkbox"><input type="checkbox" name="active" [(ngModel)]="catalogForm.active">Ativo</label><p class="field-help">A inativação preserva o histórico dos chamados existentes.</p><footer><button type="button" class="btn secondary" (click)="modal=''">Cancelar</button><button class="btn primary" type="submit" [disabled]="busy||catalogEdit.invalid">Salvar cadastro</button></footer></form>}
